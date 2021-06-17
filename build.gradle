@@ -23,12 +23,12 @@ compileJava {
 repositories {
     mavenCentral()
     maven {
-        name = 'sonatype'
-        url = 'https://oss.sonatype.org/content/repositories/public/'
+        name = "JitPack"
+        url = "https://jitpack.io/"
     }
     maven {
         name = 'spongepowered'
-        url = 'http://repo.spongepowered.org/maven'
+        url = 'https://repo.spongepowered.org/maven'
     }
 }
 
@@ -46,8 +46,13 @@ minecraft {
 }
 
 dependencies {
-    deobfCompile 'io.github.opencubicchunks:cubicchunks:1.12.2-0.0-SNAPSHOT'
-    deobfCompile 'io.github.opencubicchunks:cubicworldgen:1.12.2-0.0.39.0-SNAPSHOT'
+    deobfProvided ("com.github.OpenCubicChunks.CubicChunks:cubicchunks:b0c36d6a51c2ea69cc3583cb14d2654de8e3c6b1") {
+        transitive = false
+    }
+    deobfProvided ("com.github.OpenCubicChunks:CubicWorldGen:5a92bf27abc26da0f79fdfeb586c438b0c472519") {
+        transitive = false
+    }
+
 }
 
 processResources {

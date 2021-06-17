@@ -12,9 +12,20 @@ public class ReGenArea {
 	final DefaultDecorator.Ores ores;
 	
 	public ReGenArea(CustomGeneratorSettings settingsIn) {
-		this(new IntAABB(-300000, -300000, -300000, 300000, 300000, 300000), settingsIn);
+		this(intAabb(-300000, -300000, -300000, 300000, 300000, 300000), settingsIn);
 	}
-	
+
+	private static IntAABB intAabb(int x1, int y1, int z1, int x2, int y2, int z2) {
+		IntAABB aabb = new IntAABB();
+		aabb.minX = x1;
+		aabb.minY = y1;
+		aabb.minZ = z1;
+		aabb.maxX = x2;
+		aabb.maxY = y2;
+		aabb.maxZ = z2;
+		return aabb;
+	}
+
 	public ReGenArea(IntAABB areaIn, CustomGeneratorSettings settingsIn) {
 		area = areaIn;
 		ores = new DefaultDecorator.Ores(settingsIn);

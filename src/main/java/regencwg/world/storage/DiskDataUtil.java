@@ -1,40 +1,46 @@
 package regencwg.world.storage;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Collections;
+import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
-import cubicchunks.regionlib.impl.EntryLocation3D;
-import cubicchunks.regionlib.impl.save.SaveSection3D;
-import cubicchunks.regionlib.lib.ExtRegion;
-import cubicchunks.regionlib.lib.provider.SharedCachedRegionProvider;
-import cubicchunks.regionlib.lib.provider.SimpleRegionProvider;
 import io.github.opencubicchunks.cubicchunks.api.util.CubePos;
+import io.github.opencubicchunks.cubicchunks.api.world.ICubicWorldServer;
+import io.github.opencubicchunks.cubicchunks.api.world.storage.ICubicStorage;
+import io.github.opencubicchunks.cubicchunks.core.server.chunkio.ICubeIO;
+import io.github.opencubicchunks.cubicchunks.core.world.ICubeProviderInternal;
+import regencwg.ReGenCWGMod;
+
 import net.minecraft.world.World;
-import net.minecraft.world.WorldProvider;
 
 public class DiskDataUtil {
 
-	@SuppressWarnings("unchecked")
-	public static void addAllSavedCubePosToSet(World world, Set<CubePos> posSet) {
-		WorldProvider prov = world.provider;
-		Path path = world.getSaveHandler().getWorldDirectory().toPath();
-		if (prov.getSaveFolder() != null) {
-			path = path.resolve(prov.getSaveFolder());
-		}
-		Path part3d = path.resolve("region3d");
-		try (SaveSection3D cubeIO = new SaveSection3D(
-				new SharedCachedRegionProvider<>(
-						SimpleRegionProvider.createDefault(new EntryLocation3D.Provider(), part3d, 512)),
-				new SharedCachedRegionProvider<>(new SimpleRegionProvider<>(new EntryLocation3D.Provider(), part3d,
-						(keyProvider, regionKey) -> new ExtRegion<>(part3d, Collections.emptyList(), keyProvider,
-								regionKey))))) {
-			cubeIO.forAllKeys(c -> {
-				posSet.add(new CubePos(c.getEntryX(), c.getEntryY(), c.getEntryZ()));
+	public static void addAllSavedCubePosToSet(World world, Set<CubePos> posSet, BooleanSupplier isInterrupted) {
+		try {
+			// TODO: add public API in CC for this
+			ICubicWorldServer cubicWorld = (ICubicWorldServer) world;
+			ICubeProviderInternal.Server cubeCache = (ICubeProviderInternal.Server) cubicWorld.getCubeCache();
+			ICubeIO cubeIo = cubeCache.getCubeIO();
+			Field storageField = cubeIo.getClass().getDeclaredField("storage");
+			storageField.setAccessible(true);
+			ICubicStorage storage = (ICubicStorage) storageField.get(cubeIo);
+			storage.forEachCube(e -> {
+				if (isInterrupted.getAsBoolean()) {
+					throw new StoppedException();
+				}
+				posSet.add(e);
 			});
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException(e);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new UncheckedIOException(e);
+		} catch (StoppedException e) {
+			ReGenCWGMod.logger.info("Collecting cubes stopped");
 		}
+	}
+
+	private static class StoppedException extends RuntimeException {
 	}
 }

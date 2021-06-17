@@ -6,16 +6,14 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.gson.stream.JsonReader;
-
 import io.github.opencubicchunks.cubicchunks.api.util.CubePos;
 import io.github.opencubicchunks.cubicchunks.api.world.ICube;
 import io.github.opencubicchunks.cubicchunks.api.world.ICubicWorld;
 import io.github.opencubicchunks.cubicchunks.core.world.cube.Cube;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.JsonToNBT;
@@ -24,7 +22,6 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-import regencwg.world.storage.DiskDataUtil;
 
 public class BlockReplaceConfig {
 	public final Map<IBlockState, IBlockState> replaceMap = new HashMap<IBlockState, IBlockState>();
@@ -88,31 +85,29 @@ public class BlockReplaceConfig {
 		return buffer.toString();
 	}
 
-	public int runReplacer(World world) {
-		int affectedCubes = 0;
-		Set<CubePos> toReplaceInPosSet = new HashSet<CubePos>();
-		DiskDataUtil.addAllSavedCubePosToSet(world, toReplaceInPosSet);
-		for (CubePos pos : toReplaceInPosSet) {
-			ICube cube = ((ICubicWorld) world).getCubeFromCubeCoords(pos);
-			if (cube.getStorage() == null || cube.getStorage().isEmpty())
-				continue;
-			ExtendedBlockStorage ebs = cube.getStorage();
-			boolean markDirty = false;
-			for (int i = 0; i < 4096; i++) {
-				IBlockState bs = ebs.get(i & 15, i >> 8, i >> 4 & 15);
-				IBlockState bsToReplace = replaceMap.get(bs);
-				if (bsToReplace == null)
-					continue;
-				ebs.set(i & 15, i >> 8, i >> 4 & 15, bsToReplace);
-				markDirty = true;
-			}
-			if (markDirty) {
-				Cube ccube = (Cube) cube;
-				ccube.markDirty();
-				affectedCubes++;
-			}
+	// return true if cube got affected
+	public boolean runOneTask(World world, CubePos pos) {
+		ICube cube = ((ICubicWorld) world).getCubeFromCubeCoords(pos);
+		if (cube.getStorage() == null || cube.getStorage().isEmpty()) {
+			return false;
 		}
-		return affectedCubes;
+		ExtendedBlockStorage ebs = cube.getStorage();
+		boolean markDirty = false;
+		for (int i = 0; i < 4096; i++) {
+			IBlockState bs = ebs.get(i & 15, i >> 8, i >> 4 & 15);
+			IBlockState bsToReplace = replaceMap.get(bs);
+			if (bsToReplace == null) {
+				continue;
+			}
+			ebs.set(i & 15, i >> 8, i >> 4 & 15, bsToReplace);
+			markDirty = true;
+		}
+		if (markDirty) {
+			Cube ccube = (Cube) cube;
+			ccube.markDirty();
+			return true;
+		}
+		return false;
 	}
 
 	public static BlockReplaceConfig fromString(String string) {
