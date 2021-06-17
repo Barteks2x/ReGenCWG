@@ -89,7 +89,7 @@ public class WorldSavedDataReGenCWG extends WorldSavedData {
 
 	public int getRemaining() {
 		LinkedHashSet<CubePos> remaining = remainingCP.getNow(null);
-		return remaining == null ? 0 : remaining.size();
+		return remaining == null ? -1 : remaining.size();
 	}
 
 	public void stop() {
